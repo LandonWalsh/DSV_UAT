@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in to DSVdelivers</title>
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <style>
+    .login-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a3a5c 0%, #2a5a8a 50%, #1a3a5c 100%);
+      background-size: cover;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-page::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url('/assets/img/login-bg.jpg') center/cover no-repeat;
+      opacity: 0.3;
+    }
+    .login-content { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-content">
+      <!-- Language Bar -->
+      <div class="login-lang-bar">
+        <a href="?kc_locale=in">Bahasa Indonesia</a>
+        <a href="?kc_locale=de">Deutsch</a>
+        <a href="?kc_locale=en">English</a>
+        <a href="?kc_locale=es">Espa&ntilde;ol</a>
+        <a href="?kc_locale=fr">Fran&ccedil;ais</a>
+        <a href="?kc_locale=it">Italiano</a>
+        <a href="?kc_locale=pt">Portugu&ecirc;s</a>
+        <a href="?kc_locale=vn">Ti&#7871;ng Vi&#7879;t</a>
+        <a href="?kc_locale=ar">&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1607;</a>
+        <a href="?kc_locale=my">&#4119;&#4121;&#4140;&#4101;&#4140;</a>
+        <a href="?kc_locale=kh">&#6039;&#6070;&#6047;&#6070;&#6017;&#6098;&#6040;&#6082;&#6042;</a>
+        <a href="?kc_locale=jp">&#26085;&#26412;&#35486; (&#12395;&#12411;&#12435;&#12372;)</a>
+        <a href="?kc_locale=cn">&#31616;&#20307;&#20013;&#25991;</a>
+        <a href="?kc_locale=zh">&#32321;&#20307;&#20013;&#25991;</a>
+      </div>
+
+      <!-- Login Box -->
+      <div style="display:flex;justify-content:center;">
+        <div>
+          <div class="login-box">
+            <h4>Connect to DSV Air&amp;Sea Mobile</h4>
+            <form id="kc-form-login" method="POST" action="/auth/login">
+              <div class="form-group">
+                <label for="username">Login</label>
+                <input type="text" id="username" name="username" class="form-control" autocomplete="off">
+              </div>
+              <div class="form-group" style="margin-top:16px;">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" autocomplete="off">
+              </div>
+              <input type="hidden" name="_csrf" value="">
+              <div style="overflow:hidden;margin-top:16px;">
+                <button type="submit" class="login-btn">Login</button>
+              </div>
+            </form>
+          </div>
+          <div class="login-footer">
+            <!-- DSV Employee Login link area -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="login-bottom">
+        <div style="margin-bottom:8px;">
+          <img src="/assets/img/brand/dsv-logo-white.png" alt="DSV" style="height:30px;" onerror="this.outerHTML='<span style=color:#fff;font-size:24px;font-weight:700>DSV</span>'">
+        </div>
+        <a href="#" class="employee-link">DSV Employee Login</a>
+        <div class="app-badges">
+          <a href="#"><img src="/assets/img/google-play.png" alt="Google Play" onerror="this.outerHTML='<span style=background:#333;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px>GET IT ON<br><b>Google Play</b></span>'"></a>
+          <a href="#"><img src="/assets/img/app-store.png" alt="App Store" onerror="this.outerHTML='<span style=background:#333;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px>Download on the<br><b>App Store</b></span>'"></a>
+          <a href="#"><img src="/assets/img/china-app.png" alt="China" onerror="this.outerHTML='<span style=background:#333;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px>Download App for<br><b>China</b></span>'"></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('kc-form-login').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      // POST login
+      fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/home.do?lang=en';
+        } else {
+          alert('Invalid credentials');
+        }
+      })
+      .catch(() => {
+        // Fallback: just redirect
+        window.location.href = '/home.do?lang=en';
+      });
+    });
+  </script>
+</body>
+</html>

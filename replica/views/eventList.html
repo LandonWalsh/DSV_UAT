@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSV Air & Sea Mobile</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <style>
+    .event-list-layout {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    .left-panel { flex: 0 0 180px; }
+    .center-panel { flex: 1; max-width: 600px; }
+    .right-panel { flex: 0 0 500px; max-height: calc(100vh - 120px); overflow-y: auto; }
+    .or-divider { text-align: center; color: #212529; margin: 20px 0; font-size: 16px; }
+    .qr-upload-area {
+      border: 2px dashed #aad4f5;
+      border-radius: 8px;
+      background: #f0f8ff;
+      text-align: center;
+      padding: 40px 20px;
+      cursor: pointer;
+    }
+    .qr-upload-area:hover { background: #e0f0ff; }
+    .qr-icon { font-size: 60px; color: #1a73a7; margin-bottom: 10px; }
+    .qr-upload-area p { color: #888; font-size: 13px; margin: 5px 0 0 0; }
+    .shipment-detail {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+    }
+    .shipment-detail.visible { display: block; }
+    .shipment-detail .detail-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .shipment-detail .detail-row label {
+      width: 160px;
+      font-weight: 600;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .shipment-detail .detail-row .val {
+      flex: 1;
+      background: #e9ecef;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .shipment-detail .detail-row select,
+    .shipment-detail .detail-row input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn-add-list {
+      background: #f0883e;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      float: right;
+    }
+    .btn-add-list:hover { background: #e07530; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="dsv-navbar">
+    <div class="user-label">
+      <span>Dolphin</span>
+      <i class="fas fa-user-circle"></i>
+    </div>
+    <div class="brand">
+      <img src="/assets/img/brand/dsv-logo.svg" alt="DSV" style="height:30px;width:93px;">
+      <span class="brand-text">AIR &amp; SEA MOBILE <span class="version">(v.3.3.2)</span></span>
+    </div>
+    <button class="logout-btn" onclick="showLogoutDialog()">
+      <i class="fas fa-sign-out-alt" style="color:#fff;font-size:18px;"></i>
+    </button>
+  </nav>
+
+  <!-- Breadcrumb -->
+  <div class="dsv-breadcrumb">
+    <a href="/home.do">Home</a> / <span>New Event</span>
+  </div>
+
+  <!-- Main Content -->
+  <div class="event-list-layout">
+    <!-- Left: Multi-event button -->
+    <div class="left-panel">
+      <button class="multi-event-btn" onclick="window.location.href='/multiEventStep1.do'">
+        Want to create a multi event ?
+      </button>
+    </div>
+
+    <!-- Center: Search + QR upload -->
+    <div class="center-panel">
+      <div class="search-section">
+        <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Enter Job Reference</label>
+        <form id="validationForm" method="get" onsubmit="searchShipment(event)">
+          <div class="search-row">
+            <input type="text" id="jobreference" name="jobreference" placeholder="Type here" autocomplete="off">
+            <button type="submit" class="btn-search" id="btnFind">Search</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="or-divider"><b>or</b></div>
+
+      <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Upload / Drag a document with Barcode / QR Code</label>
+      <div class="qr-upload-area" id="qrDropzone">
+        <div class="qr-icon">
+          <i class="fas fa-qrcode"></i>
+        </div>
+        <p>PDF, PNG file</p>
+        <input type="file" id="qrFileInput" accept=".png,.jpg,.pdf" style="display:none;">
+      </div>
+
+      <!-- Shipment detail panel (shown after search) -->
+      <div class="shipment-detail" id="shipmentDetail">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Right: Recent Events -->
+    <div class="right-panel">
+      <div class="recent-events">
+        <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Your Last Event(s)</label>
+        <div id="eventsList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden form for init event -->
+  <form id="initEventForm" method="POST" action="/initEvent.do" style="display:none;">
+    <input type="hidden" name="jobreference" id="eventBean_jobreference">
+    <input type="hidden" name="referencetype" id="eventBean_referencetype" value="SID">
+    <input type="hidden" name="serviceType" id="eventBean_serviceType" value="SHIPMENT">
+    <input type="hidden" name="searchType" id="eventBean_searchType" value="SHIPMENT_REFERENCE">
+    <input type="hidden" name="searchNumber" id="eventBean_searchNumber">
+    <input type="hidden" name="containerStatus" id="eventBean_containerStatus" value="false">
+    <input type="hidden" name="selectedShipments" id="eventBean_selectedShipments">
+    <input type="hidden" name="noContainerEventTypeCode" id="eventBean_noContainerEventTypeCode">
+    <input type="hidden" name="_csrf" value="">
+  </form>
+
+  <!-- Logout Dialog -->
+  <div class="modal-overlay" id="logoutModal">
+    <div class="modal-dialog">
+      <p>Are you sure you want to log out?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="hideLogoutDialog()">No</button>
+        <button class="btn-submit" onclick="window.location.href='/auth/logout'">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mock recent events data
+    const recentEvents = [
+      { ref: 'SSZX7963172', container: 'MRSU7012756', type: 'DELIVERY', date: '2024-12-30 10:31', ago: '465 days ago', ok: false },
+      { ref: 'SGVA0134084', container: 'HAMU1618600', type: 'DELIVERY', date: '2026-04-10 08:13', ago: '1 hours ago', ok: true },
+      { ref: 'SGVA0134072', container: 'WBPU7087286', type: 'DELIVERY', date: '2026-04-10 08:12', ago: '1 hours ago', ok: true },
+      { ref: 'SGVA0134007', container: 'ONEU1324398', type: 'DELIVERY', date: '2026-04-09 13:01', ago: '20 hours ago', ok: true },
+      { ref: 'SGVA0134679', container: 'CMAU3467138', type: 'DELIVERY', date: '2026-04-09 11:12', ago: '22 hours ago', ok: true },
+      { ref: 'SGVA0134691', container: 'TGBU5854707', type: 'DELIVERY', date: '2026-04-09 08:38', ago: '1 days ago', ok: true },
+      { ref: 'SGVA0134072', container: 'CAIU4260517', type: 'DELIVERY', date: '2026-04-08 09:39', ago: '1 days ago', ok: true },
+      { ref: 'SGVA0134021', container: 'ONEU0360451', type: 'DELIVERY', date: '2026-04-08 08:30', ago: '2 days ago', ok: true }
+    ];
+
+    // Mock shipment database
+    const shipmentDB = {
+      'SGVA0134084': {
+        ref: 'SGVA0134084',
+        containers: [{ number: 'HAMU1618600', consol: 'CCH437195' }],
+        grossWeight: '7666.0',
+        packages: '25',
+        origin: 'Avenches, Switzerland',
+        destination: 'Riverside, United states',
+        eventTypes: [{ code: 'DLV', name: 'Delivery' }]
+      },
+      'SGVA0134072': {
+        ref: 'SGVA0134072',
+        containers: [{ number: 'WBPU7087286', consol: 'CCH437190' }, { number: 'CAIU4260517', consol: 'CCH437191' }],
+        grossWeight: '5200.0',
+        packages: '18',
+        origin: 'Geneva, Switzerland',
+        destination: 'Los Angeles, United states',
+        eventTypes: [{ code: 'DLV', name: 'Delivery' }]
+      },
+      'SGVA0134007': {
+        ref: 'SGVA0134007',
+        containers: [{ number: 'ONEU1324398', consol: 'CCH437180' }],
+        grossWeight: '3400.0',
+        packages: '12',
+        origin: 'Zurich, Switzerland',
+        destination: 'New York, United states',
+        eventTypes: [{ code: 'DLV', name: 'Delivery' }]
+      }
+    };
+
+    // Render recent events (matching prod .logevent structure)
+    function renderEvents() {
+      const el = document.getElementById('eventsList');
+      el.className = 'logevents';
+      el.style.cssText = 'border:1px dashed #ccc;border-radius:5px;background:#fff;box-shadow:0 0 10px rgba(150,150,150,0.3);max-height:600px;overflow-y:auto;padding:5px;';
+      el.innerHTML = recentEvents.map(e => `
+        <div class="logevent" onclick="loadEvent('${e.ref}')" style="display:flex;flex-wrap:wrap;margin:8px;border-radius:4px;cursor:pointer;overflow:hidden;">
+          <div style="flex:0 0 75%;background:#002664;color:#fff;padding:2px 0 2px 5px;font-size:13px;font-weight:600;border:1px solid #002664;">
+            <span style="color:${e.ok ? '#28a745' : '#dc3545'};margin-right:4px;font-size:14px;">${e.ok ? '&#9989;' : '&#10060;'}</span>
+            ${e.ref} / Container Number ${e.container}
+          </div>
+          <div style="flex:0 0 25%;background:#002664;color:#ffc107;padding:2px 5px 2px 0;font-size:12px;font-weight:600;text-align:right;font-style:italic;border:1px solid #002664;">
+            ${e.ago}
+          </div>
+          <div style="flex:0 0 25%;background:#fff;border:1px solid #dee2e6;padding:4px;text-align:center;" onclick="event.stopPropagation();">
+            <a href="/initEvent.do?ref=${e.ref}" style="display:inline-block;background:#fff;border:1px solid #ccc;border-radius:10px;padding:1px 8px;font-size:10px;color:#333;text-decoration:none;cursor:pointer;"><i class="fas fa-globe" style="font-size:9px;"></i> www</a>
+          </div>
+          <div style="flex:0 0 75%;background:#fff;border:1px solid #dee2e6;padding:4px 8px;font-size:12px;color:#333;">
+            <div style="display:flex;justify-content:space-between;"><span>Event type</span><span>${e.type}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Event Date</span><span>${e.date}</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Search shipment — matches prod flow:
+    // 1. Call searchShipmentAndConsolShipment.do (checks for consol + shipment)
+    // 2. If statusCode==200, call searchShipment.do (gets full details)
+    // 3. Populate hidden form fields from response
+    // 4. Auto-submit initEventForm to navigate to initEvent.do
+    function searchShipment(e) {
+      e.preventDefault();
+      const ref = document.getElementById('jobreference').value.trim();
+      if (!ref) return;
+
+      // Step 1: searchShipmentAndConsolShipment.do
+      fetch(`/searchShipmentAndConsolShipment.do?referencetype=SID&jobref=${encodeURIComponent(ref)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.statusCode === 200 && data.serviceType) {
+            // Step 2: searchShipment.do for full details
+            return fetch(`/searchShipment.do?referencetype=SID&jobref=${encodeURIComponent(ref)}`)
+              .then(r => r.json())
+              .then(shipData => {
+                // Step 3: Populate hidden form fields
+                const form = document.getElementById('initEventForm');
+                document.getElementById('eventBean_jobreference').value = ref;
+                document.getElementById('eventBean_referencetype').value = 'SID';
+                document.getElementById('eventBean_serviceType').value = data.serviceType;
+                document.getElementById('eventBean_searchType').value = data.searchType || 'SHIPMENT_REFERENCE';
+                document.getElementById('eventBean_searchNumber').value = data.searchNumber;
+                document.getElementById('eventBean_containerStatus').value = String(data.containerStatus);
+
+                // Step 4: Navigate to initEvent.do (matches prod POST->redirect flow)
+                window.location.href = '/initEvent.do?ref=' + encodeURIComponent(ref);
+              });
+          } else if (data.statusCode === 404) {
+            alert('Shipment not found: ' + ref);
+          } else {
+            alert('Error: ' + (data.statusMessage || 'Server error'));
+          }
+        })
+        .catch(() => {
+          // Fallback: navigate directly
+          window.location.href = '/initEvent.do?ref=' + encodeURIComponent(ref);
+        });
+    }
+
+    // Load event from recent list
+    function loadEvent(ref) {
+      document.getElementById('jobreference').value = ref;
+      searchShipment(new Event('submit'));
+    }
+
+    // QR upload
+    document.getElementById('qrDropzone').addEventListener('click', function() {
+      document.getElementById('qrFileInput').click();
+    });
+
+    document.getElementById('qrFileInput').addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        const formData = new FormData();
+        formData.append('file', e.target.files[0]);
+        fetch('/uploadQR.do', { method: 'POST', body: formData })
+          .then(r => r.json())
+          .then(data => {
+            if (data.jobreference) {
+              document.getElementById('jobreference').value = data.jobreference;
+              searchShipment(new Event('submit'));
+            }
+          })
+          .catch(err => console.log('QR upload error:', err));
+      }
+    });
+
+    function showLogoutDialog() { document.getElementById('logoutModal').classList.add('active'); }
+    function hideLogoutDialog() { document.getElementById('logoutModal').classList.remove('active'); }
+
+    renderEvents();
+  </script>
+</body>
+</html>

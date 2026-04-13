@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSV Air & Sea Mobile</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <style>
+    .multi-layout {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    .panel-events { flex: 0 0 480px; max-height: calc(100vh - 160px); overflow-y: auto; }
+    .panel-search { flex: 1; }
+    .panel-selected { flex: 0 0 260px; }
+    .or-divider { text-align: center; color: #666; margin: 20px 0; font-size: 14px; }
+    .qr-upload-area {
+      border: 2px dashed #aad4f5;
+      border-radius: 8px;
+      background: #f0f8ff;
+      text-align: center;
+      padding: 30px 20px;
+      cursor: pointer;
+    }
+    .qr-upload-area:hover { background: #e0f0ff; }
+    .shipment-detail {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+    }
+    .shipment-detail.visible { display: block; }
+    .detail-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .detail-row label { width: 160px; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+    .detail-row .val {
+      flex: 1;
+      background: #e9ecef;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .detail-row select, .detail-row input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .detail-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    .btn-add-list {
+      background: #f0883e;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-add-list:hover { background: #e07530; }
+    .selected-ref-item {
+      background: #e2e6ea;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .selected-ref-item .remove-btn {
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .empty-msg { color: #999; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="dsv-navbar">
+    <div class="user-label"><span>Dolphin</span> <i class="fas fa-user-circle"></i></div>
+    <div class="brand">
+      <img src="/assets/img/brand/dsv-logo.svg" alt="DSV" style="height:30px;width:93px;">
+      <span class="brand-text">AIR &amp; SEA MOBILE <span class="version">(v.3.3.2)</span></span>
+    </div>
+    <button class="logout-btn" onclick="showLogoutDialog()"><i class="fas fa-sign-out-alt" style="color:#fff;font-size:18px;"></i></button>
+  </nav>
+
+  <!-- Breadcrumb -->
+  <div class="dsv-breadcrumb">
+    <a href="/home.do">Home</a> / <span>Multi Event</span>
+  </div>
+
+  <!-- Step controls -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;">
+    <button class="multi-event-btn" onclick="window.location.href='/eventList.do'">Want to create a single event ?</button>
+    <div class="step-indicator">
+      <span class="step-badge"><span class="step-label">Step</span><span class="step-num">1</span></span>
+      <span class="step-text">Search a job reference and select your shipment or container</span>
+    </div>
+    <div></div>
+  </div>
+
+  <hr style="margin:0;border-color:#ddd;">
+
+  <!-- Main layout -->
+  <div class="multi-layout">
+    <!-- Left: Recent events -->
+    <div class="panel-events">
+      <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Your Last Event(s)</label>
+      <div id="eventsList"></div>
+    </div>
+
+    <!-- Center: Search -->
+    <div class="panel-search">
+      <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Enter Job Reference</label>
+      <div class="search-row">
+        <input type="text" id="jobreference" placeholder="Type here" autocomplete="off">
+        <button class="btn-search" onclick="searchRef()">Search</button>
+      </div>
+
+      <div class="or-divider">or</div>
+
+      <label style="font-size:16px;font-weight:400;display:block;margin-bottom:8px;">Upload / Drag a document with Barcode / QR Code</label>
+      <div class="qr-upload-area">
+        <i class="fas fa-qrcode" style="font-size:50px;color:#1a73a7;"></i>
+        <p style="color:#888;font-size:13px;margin-top:8px;">PDF, PNG file</p>
+      </div>
+
+      <!-- Shipment detail (shown after search) -->
+      <div class="shipment-detail" id="shipmentDetail"></div>
+    </div>
+
+    <!-- Right: Selected references -->
+    <div class="panel-selected">
+      <h6 style="font-weight:600;margin-bottom:10px;">Selected References ( <span id="selectedCount">0</span> )</h6>
+      <div id="selectedList">
+        <span class="empty-msg">No selected reference</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next arrow -->
+  <button class="step-arrow step-arrow-right" id="btnNext" onclick="goToStep2()" title="Next step">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+
+  <!-- Logout Dialog -->
+  <div class="modal-overlay" id="logoutModal">
+    <div class="modal-dialog">
+      <p>Are you sure you want to log out?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="hideLogoutDialog()">No</button>
+        <button class="btn-submit" onclick="window.location.href='/auth/logout'">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remove confirmation dialog -->
+  <div class="modal-overlay" id="removeModal">
+    <div class="modal-dialog">
+      <p>Remove this reference?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" id="cancelRemoveBtn" onclick="hideRemoveDialog()">No</button>
+        <button class="btn-submit" id="confirmRemoveBtn" onclick="confirmRemove()">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const selectedRefs = [];
+    let pendingRemoveIndex = -1;
+
+    // Same mock data as eventList
+    const recentEvents = [
+      { ref: 'SSZX7963172', container: 'MRSU7012756', type: 'DELIVERY', date: '2024-12-30 10:31', ago: '465 days ago', ok: false },
+      { ref: 'SGVA0134084', container: 'HAMU1618600', type: 'DELIVERY', date: '2026-04-10 08:13', ago: '1 hours ago', ok: true },
+      { ref: 'SGVA0134072', container: 'WBPU7087286', type: 'DELIVERY', date: '2026-04-10 08:12', ago: '1 hours ago', ok: true },
+      { ref: 'SGVA0134007', container: 'ONEU1324398', type: 'DELIVERY', date: '2026-04-09 13:01', ago: '20 hours ago', ok: true },
+      { ref: 'SGVA0134679', container: 'CMAU3467138', type: 'DELIVERY', date: '2026-04-09 11:12', ago: '22 hours ago', ok: true },
+      { ref: 'SGVA0134691', container: 'TGBU5854707', type: 'DELIVERY', date: '2026-04-09 08:38', ago: '1 days ago', ok: true },
+      { ref: 'SGVA0134072', container: 'CAIU4260517', type: 'DELIVERY', date: '2026-04-08 09:39', ago: '1 days ago', ok: true },
+      { ref: 'SGVA0134021', container: 'ONEU0360451', type: 'DELIVERY', date: '2026-04-08 08:30', ago: '2 days ago', ok: true }
+    ];
+
+    const shipmentDB = {
+      'SGVA0134084': { ref: 'SGVA0134084', containers: [{number:'HAMU1618600',consol:'CCH437195'}], grossWeight:'7666.0', packages:'25', origin:'Avenches, Switzerland', destination:'Riverside, United states' },
+      'SGVA0134072': { ref: 'SGVA0134072', containers: [{number:'WBPU7087286',consol:'CCH437190'}], grossWeight:'5200.0', packages:'18', origin:'Geneva, Switzerland', destination:'Los Angeles, United states' },
+      'SGVA0134007': { ref: 'SGVA0134007', containers: [{number:'ONEU1324398',consol:'CCH437180'}], grossWeight:'3400.0', packages:'12', origin:'Zurich, Switzerland', destination:'New York, United states' }
+    };
+
+    function renderEvents() {
+      document.getElementById('eventsList').innerHTML = recentEvents.map(e => `
+        <div class="event-item" onclick="document.getElementById('jobreference').value='${e.ref}'; searchRef();">
+          <div>
+            <span class="${e.ok?'status-ok':'status-err'}">${e.ok?'&#10004;':'&#10008;'}</span>
+            <span class="ref">${e.ref} /Container Number ${e.container}</span><br>
+            <span class="www-badge"><i class="fas fa-globe"></i> www</span>
+            <span style="margin-left:20px;">Event type</span><span style="margin-left:60px;">${e.type}</span><br>
+            <span style="margin-left:52px;">Event Date</span><span style="margin-left:48px;">${e.date}</span>
+          </div>
+          <div class="meta"><span class="ago" style="color:${e.ok?'#ffc107':'#dc3545'}">${e.ago}</span></div>
+        </div>
+      `).join('');
+    }
+
+    function searchRef() {
+      const ref = document.getElementById('jobreference').value.trim();
+      if (!ref) return;
+
+      fetch(`/searchShipmentAndConsolShipment.do?referencetype=SID&jobref=${encodeURIComponent(ref)}`)
+        .then(r => r.json())
+        .then(data => showShipmentDetail(data))
+        .catch(() => {
+          const ship = shipmentDB[ref];
+          if (ship) showShipmentDetail(ship);
+          else alert('Shipment not found: ' + ref);
+        });
+    }
+
+    function showShipmentDetail(data) {
+      const el = document.getElementById('shipmentDetail');
+      el.className = 'shipment-detail visible';
+      el.innerHTML = `
+        <div class="detail-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="radio" name="stype" value="SHP" checked style="width:20px;height:20px;accent-color:#007bff;">
+            <label style="width:auto;font-weight:700;">Shipment Number</label>
+          </div>
+          <div class="val" style="margin-left:20px;">${data.ref}</div>
+        </div>
+        <div class="detail-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="radio" name="stype" value="CNT" style="width:20px;height:20px;accent-color:#007bff;">
+            <label style="width:auto;">Container Number</label>
+          </div>
+          <select style="margin-left:20px;">
+            <option>Select one</option>
+            ${(data.containers||[]).map(c => `<option value="${c.number}">${c.number}</option>`).join('')}
+          </select>
+        </div>
+        <div class="detail-row"><label>Gross Weight</label><div class="val">${data.grossWeight||''}</div></div>
+        <div class="detail-row"><label>Number of Packages</label><div class="val">${data.packages||''}</div></div>
+        <div class="detail-row"><label>Origin</label><div class="val">${data.origin||''}</div></div>
+        <div class="detail-row"><label>Destination</label><div class="val">${data.destination||''}</div></div>
+        <div class="detail-actions">
+          <button class="btn-cancel" onclick="document.getElementById('shipmentDetail').className='shipment-detail'">Cancel</button>
+          <button class="btn-add-list" onclick="addToList('${data.ref}')">Add to list</button>
+        </div>
+      `;
+    }
+
+    function addToList(ref) {
+      if (selectedRefs.includes(ref)) { alert('Already added'); return; }
+      selectedRefs.push(ref);
+      fetch(`/addSelectedReference.do?ref=${encodeURIComponent(ref)}`).catch(()=>{});
+      document.getElementById('shipmentDetail').className = 'shipment-detail';
+      renderSelected();
+    }
+
+    function renderSelected() {
+      document.getElementById('selectedCount').textContent = selectedRefs.length;
+      const el = document.getElementById('selectedList');
+      if (selectedRefs.length === 0) {
+        el.innerHTML = '<span class="empty-msg">No selected reference</span>';
+      } else {
+        el.innerHTML = selectedRefs.map((r, i) => `
+          <div class="selected-ref-item">
+            <span>${r}</span>
+            <button class="remove-btn" onclick="askRemove(${i})"><i class="fas fa-times"></i></button>
+          </div>
+        `).join('');
+      }
+    }
+
+    function askRemove(i) { pendingRemoveIndex = i; document.getElementById('removeModal').classList.add('active'); }
+    function hideRemoveDialog() { document.getElementById('removeModal').classList.remove('active'); pendingRemoveIndex = -1; }
+    function confirmRemove() {
+      if (pendingRemoveIndex >= 0) selectedRefs.splice(pendingRemoveIndex, 1);
+      hideRemoveDialog();
+      renderSelected();
+    }
+
+    function goToStep2() {
+      if (selectedRefs.length === 0) { alert('Please select at least one reference'); return; }
+      sessionStorage.setItem('multiEventRefs', JSON.stringify(selectedRefs));
+      window.location.href = '/multiEventStep2.do';
+    }
+
+    function showLogoutDialog() { document.getElementById('logoutModal').classList.add('active'); }
+    function hideLogoutDialog() { document.getElementById('logoutModal').classList.remove('active'); }
+
+    renderEvents();
+    renderSelected();
+  </script>
+</body>
+</html>

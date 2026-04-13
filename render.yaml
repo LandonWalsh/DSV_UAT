@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: dsv-uat
+    runtime: node
+    rootDir: replica
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production

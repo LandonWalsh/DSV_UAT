@@ -4,7 +4,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ===== Middleware =====
 app.use(express.json());
@@ -13,18 +13,8 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/dist', express.static(path.join(__dirname, 'dist')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-// File upload config
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, 'uploads'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// Ensure uploads dir exists
-const fs = require('fs');
-if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
-  fs.mkdirSync(path.join(__dirname, 'uploads'));
-}
+// File upload config — memory storage (no disk writes, safe for Render free tier)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ===== Mock Data =====
 const shipmentDB = {
@@ -271,7 +261,7 @@ app.post('/createEvent.do', upload.array('file', 5), (req, res) => {
     packages: req.body.package,
     origin: req.body.origin,
     destination: req.body.destination,
-    files: (req.files || []).map(f => ({ name: f.originalname, path: f.path, size: f.size }))
+    files: (req.files || []).map(f => ({ name: f.originalname, size: f.size }))
   };
 
   eventLog.push(event);
@@ -296,7 +286,7 @@ app.post('/createMultiEvents.do', upload.array('file', 5), (req, res) => {
     comments: req.body.comments,
     contact: req.body.contact,
     gmtOffset: req.body.gmtOffset,
-    files: (req.files || []).map(f => ({ name: f.originalname, path: f.path, size: f.size }))
+    files: (req.files || []).map(f => ({ name: f.originalname, size: f.size }))
   }));
 
   eventLog.push(...events);
